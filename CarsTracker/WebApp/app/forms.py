@@ -1,10 +1,7 @@
-from flask_wtf import FlaskForm
-from wtforms import StringField
-from wtforms.fields import DataRequired, Email, Length, EqualTo
-from wtforms.fields.html5 import EmailField
+from wtforms import Form, StringField, PasswordField, EmailField, validators
 
-class RegisterForm(FlaskForm):
-    username = StringField('username', validators=[DataRequired()])
-    email = EmailField('email', validators=[DataRequired(), Email()])
-    password = StringField('password', validators=[DataRequired(), Length(min=8)])
-    confirm_pwd = StringField('confirm_pwd', validators=[DataRequired(), EqualTo('password', message='Passwords must match!')])
+class RegisterForm(Form):
+    username = StringField('Username', [validators.Length(min=4, max=100), validators.DataRequired()])
+    email = EmailField('Email', [validators.Length(min=6, max=120), validators.DataRequired()])
+    password = PasswordField('Password', [validators.DataRequired(), validators.EqualTo('confirm_password', message='Password must match!')])
+    confirm_password = PasswordField('Repeat password')
