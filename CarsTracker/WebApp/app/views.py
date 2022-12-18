@@ -1,19 +1,30 @@
 from flask import render_template, url_for, redirect, request, flash
+from flask_login import login_user, logout_user, login_required, current_user
 from flask.views import View, MethodView
 
-from .forms import RegisterForm
+from .forms import RegisterForm, LoginForm
 from .models import Users
 from .states import UserStates
-from app import db
+from app import db, bcrypt
 
 
 class IndexView(View):
 
-    def __init__(self):
-        self.welcome_text = "Hello!"
+    def dispatch_request(self):
+        if request.method == 'GET':
+            return render_template("base.html", user=current_user)
+        elif request.method == 'POST':
+            return render_template("base.html", user=current_user)
+
+
+
+class HomeView(View):
 
     def dispatch_request(self):
-        return render_template("base.html")
+        if request.method == 'GET':
+            return render_template("home.html", user=current_user)
+        elif request.method == 'POST':
+            return render_template("home.html", user=current_user)
 
 
 class RegisterView(MethodView):
@@ -37,7 +48,7 @@ class RegisterView(MethodView):
 
     def get(self):
         register_form = RegisterForm(request.form)
-        return render_template("register.html", register_form=register_form)
+        return render_template("register.html", register_form=register_form, user=current_user)
 
     def post(self):
         register_form = RegisterForm(request.form)
@@ -49,14 +60,42 @@ class RegisterView(MethodView):
                 return render_template('register.html', register_form=RegisterForm())
             elif state == UserStates.CREATED:
                 flash("User account successfully created!", category='success')
-                redirect(url_for('login'))
+                return redirect(url_for('login', user=current_user))
         else:
             flash('Form data is not valid!', category='error')
 
-        return render_template('register.html', register_form=RegisterForm())    
+        return render_template('register.html', register_form=RegisterForm(), user=current_user)    
 
 
 class LoginView(MethodView):
 
-    def __login_user(self):
-        pass
+    def get(self):
+        login_form = LoginForm(request.form)
+        return render_template("login.html", login_form=login_form, user=current_user)
+
+    def post(self):
+        login_form = LoginForm(request.form)
+        if login_form.validate():
+            username = request.form.get('username')
+            password = request.form.get('password')
+            
+            user = Users.query.filter_by(username=username).first()
+            if user:
+                if bcrypt.check_password_hash(user.password, password=password):
+                    flash('Logged in successfully!', category='success')
+                    login_user(user=user, remember=True)
+                    return redirect(url_for('home'))
+                else:
+                    flash('Incorrect password, try again!', category='error')
+            else:
+                flash('Email does not exist!', category='error')
+
+        return render_template('login.html', login_form=login_form, user=current_user)
+
+
+class LogoutView(View):
+
+    def dispatch_request(self):
+        flash('Goodbye!')
+        logout_user()
+        return redirect(url_for('login'))
